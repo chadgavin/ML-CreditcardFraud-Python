@@ -4,8 +4,12 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from matplotlib import gridspec
 from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble import IsolationForest
 from sklearn.metrics import confusion_matrix
+from IPython.display import Image, display
+from sklearn.tree import export_graphviz
+import pydot
 
 def visualiseFeatures(data):
     print(data.shape)
@@ -43,7 +47,14 @@ def divideToFeaturesNTarget(data):
     X_data=X.values
     Y_data=Y.values
     X_train, X_test, Y_train, Y_test = train_test_split(X_data, Y_data, test_size = 0.2, random_state = 42)
-    return  X_train, X_test, Y_train, Y_test
+    return X,Y, X_train, X_test, Y_train, Y_test
+
+def RandomForestClass(X_train,Y_train,X_test):
+
+    rfc = RandomForestClassifier()
+    rfc.fit(X_train,Y_train)
+    y_pred = rfc.predict(X_test)
+    return rfc
 
 def isolationForest( X_train, X_test, Y_train, Y_test,outlier_fraction):
     ifc=IsolationForest(max_samples=len(X_train),
@@ -64,6 +75,20 @@ def isolationForest( X_train, X_test, Y_train, Y_test,outlier_fraction):
     plt.ylabel('True class')
     plt.xlabel('Predicted class')
     plt.show()
+
+def visualiseRF(X,rfc):
+    #visualizing the random tree 
+    feature_list = list(X.columns)
+    # Import tools needed for visualization
+   
+    #pulling out one tree from the forest
+    tree = rfc.estimators_[5]
+    export_graphviz(tree, out_file = 'tree.dot', feature_names = feature_list, rounded = True, precision = 1)
+
+    (graph,) = pydot.graph_from_dot_file('tree.dot')
+    # Write graph to a png file
+    graph.write_png('tree.png')
+
 def main():
     data = pd.read_csv('creditcard.csv')
     features, gs = visualiseFeatures(data)
@@ -78,9 +103,10 @@ def main():
     Fraud, outlier_fraction = determineFraud(data)
     print(Fraud.Amount.describe())
     heatmap(data)
-    X_train, X_test, Y_train, Y_test = divideToFeaturesNTarget(data)
+    X, Y, X_train, X_test, Y_train, Y_test = divideToFeaturesNTarget(data)
+    rfc = RandomForestClass(X_train,Y_train,X_test)
     isolationForest(X_train, X_test, Y_train, Y_test,outlier_fraction)
-    
+    visualiseRF(X, rfc)
 
 if __name__ == "__main__":
     main()
